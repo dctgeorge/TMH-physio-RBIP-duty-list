@@ -473,11 +473,46 @@ function updateDateStatus(){
 
 async function goToDate(ds){
   if(!ds) return;
-  // Save current
+  // Save current data before switching
   await saveData();
+
+  // Remember current settings to carry over if new date has no record
+  const prevTeams = JSON.parse(JSON.stringify(teams));
+  const prevPCAs = JSON.parse(JSON.stringify(pcas));
+
   setCurrentDate(ds);
   initDefaults();
   const loaded = await loadDate(ds);
+
+  // If new date has no record, carry over therapist names, beds, PCA names from previous date
+  if(!loaded){
+    // Carry over team therapist names & bed counts
+    prevTeams.forEach((pt, i) => {
+      if(i < teams.length){
+        teams[i].therapist = pt.therapist;
+        teams[i].beds = pt.beds;
+        teams[i].name = pt.name;
+      }
+    });
+    // If previous had more teams, add them
+    for(let i = teams.length; i < prevTeams.length; i++){
+      teams.push({...prevTeams[i], therapistUnits:1, pref1:[false,false,false,false], pref2:[false,false,false,false], remarks:""});
+      resUnits.push({units:1, slots:[true,true,true,true]});
+    }
+    // Carry over PCA names & settings
+    prevPCAs.forEach((pp, i) => {
+      if(i < pcas.length){
+        pcas[i].name = pp.name;
+        pcas[i].isResident = pp.isResident;
+        pcas[i].residentTeam = pp.residentTeam;
+      }
+    });
+    // If previous had more PCAs, add them
+    for(let i = pcas.length; i < prevPCAs.length; i++){
+      pcas.push({...prevPCAs[i], slots:[true,true,true,true], remarks:""});
+    }
+  }
+
   syncAdjInputs();
   if(!loaded || Object.keys(manualGrid).length===0) runAllocation();
   renderAll();
